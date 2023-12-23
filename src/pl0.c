@@ -677,33 +677,33 @@ void statement(symset fsys)
 	
 		// TODO: add PRT to symtype
 	else if (sym == SYM_PRINT){
-		get_symbol();
+		getsym();
 		if (sym == SYM_LPAREN){
-			get_symbol();
+			getsym();
 		}
 		else{
-			print_error(27);
+			error(27);
 		}
-		set1 = create_set(SYM_COMMA, SYM_RPAREN, SYM_NULL);
-		set = unite_set(fsys, set1);
+		set1 = createset(SYM_COMMA, SYM_RPAREN, SYM_NULL);
+		set = uniteset(fsys, set1);
 		while (sym != SYM_RPAREN){
 			if (inset(sym, facbegsys)){
 				expression(set);
 			}
 			else
-				print_error(26);
+				error(26);
 			gen(PRT, 0, 0);
 			if (sym == SYM_COMMA){
-				get_symbol();
+				getsym();
 			}
 			else if (sym != SYM_RPAREN){
-				print_error(23);
+				error(23);
 			}
 		}
-		destroy_set(set1);
-		destroy_set(set);
-		gen_inst(PRT, 0, 1);
-		get_symbol();
+		destroyset(set1);
+		destroyset(set);
+		gen(PRT, 0, 1);
+		getsym();
 	}
 	
 	test(fsys, phi, 19);
