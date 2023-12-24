@@ -268,10 +268,24 @@ void enter(int kind)
 		dx += arr_length;
 		break;
 	case ID_POINTER:
-		mk = (mask*) &table[tx];
-		mk->level = level;
-		mk->len[0] = num_dim;// a pointer's len[0] represents its (*times)
-		mk->address = dx++;
+		if(sym == SYM_IDENTIFIER){
+			mk = (mask*) &table[tx];
+			mk->level = level;
+			mk->len[MAXDIM - 1] = num_times;//
+			mk->address = dx++;
+		}else
+		if(sym == SYM_ARRAY){
+			mk = (mask*) &table[tx];
+			mk->level = level;
+			mk->address = dx;
+			int arr_length=1;
+			for(int tmp = 0;tmp < num_dim; tmp++){
+				mk->len[tmp]=len[tmp];
+				arr_length = arr_length * len[tmp];
+			}
+			dx += arr_length;
+		}else
+			error(5);
 		break;
 	} // switch
 } // enter
@@ -330,9 +344,9 @@ void vardeclaration(void)
 		getsym();
 	}else
 	if (sym == SYM_TIMES){
-		num_dim = 0;
+		num_times = 0;
 		while(sym == SYM_TIMES){
-			num_dim++;
+			num_times++;
 			getsym();
 		}
 		enter(ID_POINTER);
@@ -374,62 +388,115 @@ void factor(symset fsys)
 				pointer_length++;
 				getsym();
 			}
+			if(sym == SYM_LPAREN){ // factor -> *(expression)
+				getsym();
+				set = uniteset(createset(SYM_RPAREN, SYM_NULL), fsys);
+				
+				expression(set);
 
-			if ((i = position(id)) == 0)
-			{
-				error(11); // Undeclared identifier.
-			}
-			else
-			{
-				switch (table[i].kind)
+				while(pointer_length){
+					gen(LODI, 0, 0);
+					pointer_length--;
+				}
+
+				destroyset(set);
+				if (sym == SYM_RPAREN)
 				{
-					mask* mk;
-				case ID_CONSTANT:
-					gen(LIT, 0, table[i].value);
-					break;
-				case ID_VARIABLE:
-					mk = (mask*) &table[i];
-					if(!is_addressof)
-						gen(LOD, level - mk->level, mk->address);
-					else
-						gen(LIT, 0, mk->address);//address of
-					break;
-				case ID_PROCEDURE:
-					error(21); // Procedure identifier can not be in an expression.
-					break;
-				case ID_ARRAY:
-					mk = (mask*) &table[i];
-					int tmp=0;
-					int tmp_address=0;
-					while(mk->len[tmp]){
-						if(len[tmp] >= mk->len[tmp])
-							error(29);
-						if(!tmp)
-							tmp_address = len[tmp];
+					getsym();
+				}
+				else
+				{
+					error(22); // Missing ')'.
+				}
+			}else
+			{
+				if ((i = position(id)) == 0)
+				{
+					error(11); // Undeclared identifier.
+				}
+				else
+				{
+					switch (table[i].kind)
+					{
+						mask* mk;
+					case ID_CONSTANT:
+						gen(LIT, 0, table[i].value);
+						break;
+					case ID_VARIABLE:
+						mk = (mask*) &table[i];
+						if(!is_addressof)
+							gen(LOD, level - mk->level, mk->address);
 						else
-							tmp_address = tmp_address*(mk->len[tmp-1]) + len[tmp];
-						tmp++;
-					}
-					if(!is_addressof)
-						gen(LOD, level - mk->level, mk->address + tmp_address);
-					else
-						gen(LIT, 0, mk->address + tmp_address);
-					break;
-				case ID_POINTER:
-					mk = (mask*) &table[i];
-					if(!is_addressof){
-						gen(LOD, level - mk->level, mk->address);
-						while(pointer_length){
-							gen(LODI, 0, 0);
-							pointer_length--;
+							gen(LIT, 0, mk->address);//address of
+						break;
+					case ID_PROCEDURE:
+						error(21); // Procedure identifier can not be in an expression.
+						break;
+					case ID_ARRAY:
+						mk = (mask*) &table[i];
+						int tmp=0;
+						int tmp_address=0;
+						int not_full_array = 0;
+						while(mk->len[tmp]){
+							if(len[tmp] >= mk->len[tmp])
+								error(29);
+							if(!tmp)
+								tmp_address = len[tmp];
+							else
+								tmp_address = tmp_address*(mk->len[tmp-1]) + len[tmp];
+							if(!len[tmp])
+								not_full_array = 1;
+							tmp++;
 						}
-					}else{
-						gen(LIT, 0, mk->address);
-					}
-					break;
-				} // switch
+						if(!is_addressof){
+							if(not_full_array)
+								gen(LIT, 0, mk->address + tmp_address);
+							else
+								gen(LOD, level - mk->level, mk->address + tmp_address);
+						}else
+							gen(LIT, 0, mk->address + tmp_address);
+						break;
+					case ID_POINTER:
+						mk = (mask*) &table[i];
+						if(sym == SYM_IDENTIFIER){						
+							if(!is_addressof){
+								gen(LOD, level - mk->level, mk->address);
+								while(pointer_length){
+									gen(LODI, 0, 0);
+									pointer_length--;
+								}
+							}else{
+								gen(LIT, 0, mk->address);
+							}
+						}else
+						if(sym == SYM_ARRAY){
+							int tmp=0;
+							int tmp_address=0;
+							while(mk->len[tmp]){
+								if(len[tmp] >= mk->len[tmp])
+									error(29);
+								if(!tmp)
+									tmp_address = len[tmp];
+								else
+									tmp_address = tmp_address*(mk->len[tmp-1]) + len[tmp];
+								tmp++;
+							}
+							if(!is_addressof){
+								gen(LOD, level - mk->level, mk->address + tmp_address);
+								while(pointer_length){
+									gen(LODI, 0, 0);
+									pointer_length--;
+								}
+							}else{
+								gen(LIT, 0, mk->address + tmp_address);
+							}
+						}else
+							error(5);
+						break;
+					} // switch
+				}
+				getsym();
 			}
-			getsym();
 		}
 		else if (sym == SYM_NUMBER)
 		{
@@ -630,19 +697,43 @@ void statement(symset fsys)
 			}
 			else
 			if(mk->kind == ID_POINTER){
-				if(mk->len[0] < pointer_length){
-					error(30);
-				}
-				if(pointer_length > 0){
-					gen(LOD, level - mk->level, mk->address);
-					pointer_length--;
-					while(pointer_length){
-						gen(LODI, 0, 0);
-						pointer_length--;
+				if(!mk->len[0]){
+					if(mk->len[MAXDIM - 1] < pointer_length){
+						error(30);
 					}
-					gen(STOI, 0, 0);
-				}else
-					gen(STO, level - mk->level, mk->address);
+					if(pointer_length > 0){
+						gen(LOD, level - mk->level, mk->address);
+						pointer_length--;
+						while(pointer_length){
+							gen(LODI, 0, 0);
+							pointer_length--;
+						}
+						gen(STOI, 0, 0);
+					}else
+						gen(STO, level - mk->level, mk->address);
+				}else{//array of pointer
+					int tmp=0;
+					int tmp_address=0;
+					while(mk->len[tmp] && tmp < MAXDIM - 1){
+						if(len[tmp] >= mk->len[tmp])
+							error(29);
+						if(!tmp)
+							tmp_address = len[tmp];
+						else
+							tmp_address = tmp_address*(mk->len[tmp-1]) + len[tmp];
+						tmp++;
+					}
+					if(pointer_length > 0){
+						gen(LOD, level - mk->level, mk->address + tmp_address);
+						pointer_length--;
+						while(pointer_length){
+							gen(LODI, 0, 0);
+							pointer_length--;
+						}
+						gen(STOI, 0, 0);
+					}else
+						gen(STO, level - mk->level, mk->address + tmp_address);
+				}
 			}
 		}
 	}

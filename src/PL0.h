@@ -13,7 +13,7 @@
 
 #define MAXSYM     30     // maximum number of symbols  
 
-#define STACKSIZE  1000   // maximum storage
+#define STACKSIZE  10000   // maximum storage
 
 enum symtype
 {
@@ -131,6 +131,7 @@ int  level = 0;
 int  tx = 0;
 int  len[MAXDIM] = {0};	// for array only
 int  num_dim = 0;// for array only
+int  num_times = 0;// for pointer only
 int  is_addressof = 0;//for operator '&'
 
 char line[80];
