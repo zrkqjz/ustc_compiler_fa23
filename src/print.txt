@@ -1,0 +1,7 @@
+var i, j;
+begin
+  i := 2;
+  j := 3;
+  print(i, j);
+  print(i+1);
+end.

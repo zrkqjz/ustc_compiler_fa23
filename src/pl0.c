@@ -105,6 +105,7 @@ void getsym(void)
 		a[k] = 0;
 		strcpy(id, a);
 		word[0] = id;
+		// TODO: add new reserved word: print
 		i = NRW;
 		while (strcmp(id, word[i--]));
 		if (++i)
@@ -191,8 +192,12 @@ void getsym(void)
 	}
 } // getsym
 
-//////////////////////////////////////////////////////////////////////
-// generates (assembles) an instruction.
+/**
+ * @description:generates (assembles) an instruction.
+ * @param {int} x  opcode
+ * @param {int} y  level
+ * @param {int} z  address
+ */
 void gen(int x, int y, int z)
 {
 	if (cx > CXMAX)
@@ -969,6 +974,12 @@ void interpret()
 			if (stack[top] == 0)
 				pc = i.a;
 			top--;
+			break;
+		case PRT:
+			if (i.a == 0)
+				printf("%d ", stack[top--]);
+			else
+				printf("\n");
 			break;
 		} // switch
 	}
