@@ -797,6 +797,7 @@ void block(symset fsys)
 	do
 	{
 		while (sym == SYM_CONST)
+		while (sym == SYM_CONST)
 		{ // constant declarations
 			getsym();
 			do
@@ -818,7 +819,9 @@ void block(symset fsys)
 			}
 			while (sym == SYM_IDENTIFIER);
 		} // while CONST
+		} // while CONST
 
+		while (sym == SYM_VAR)
 		while (sym == SYM_VAR)
 		{ // variable declarations
 			getsym();
@@ -840,6 +843,7 @@ void block(symset fsys)
 				}
 			}
 			while (sym == SYM_IDENTIFIER || sym == SYM_ARRAY);
+		} // while VAR
 		} // while VAR
 
 
@@ -1026,6 +1030,14 @@ void interpret()
 			printf("%d\n", stack[top-1]);
 			top-=2;
 			break;
+		case LODI:
+			stack[top] = stack[stack[top]];
+			break;
+		case STOI:
+			stack[stack[top]] = stack[top-1];
+			printf("%d\n", stack[top-1]);
+			top-=2;
+			break;
 		case CAL:
 			stack[top + 1] = base(stack, b, i.l);
 			// generate new block mark
@@ -1044,12 +1056,6 @@ void interpret()
 			if (stack[top] == 0)
 				pc = i.a;
 			top--;
-			break;
-		case PRT:
-			if (i.a == 0)
-				printf("%d ", stack[top--]);
-			else
-				printf("\n");
 			break;
 		} // switch
 	}
@@ -1080,6 +1086,7 @@ void main ()
 	// create begin symbol sets
 	declbegsys = createset(SYM_CONST, SYM_VAR, SYM_PROCEDURE, SYM_NULL);
 	statbegsys = createset(SYM_BEGIN, SYM_CALL, SYM_IF, SYM_WHILE, SYM_NULL);
+	facbegsys = createset(SYM_IDENTIFIER, SYM_NUMBER,  SYM_TIMES, SYM_LPAREN, SYM_MINUS, SYM_ARRAY, SYM_ADDRESSOF, SYM_NULL);
 	facbegsys = createset(SYM_IDENTIFIER, SYM_NUMBER,  SYM_TIMES, SYM_LPAREN, SYM_MINUS, SYM_ARRAY, SYM_ADDRESSOF, SYM_NULL);
 
 	err = cc = cx = ll = 0; // initialize global variables
