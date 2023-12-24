@@ -398,6 +398,11 @@ void factor(symset fsys)
 	int i;
 	symset set;
 	
+	int len_left[MAXDIM];
+	for(int i=0;i<MAXDIM;i++)
+		len_left[i]=len[i];
+	int num_dim_tmp = num_dim;
+
 	test(facbegsys, fsys, 24); // The symbol can not be as the beginning of an expression.
 
 	if (inset(sym, facbegsys))
@@ -430,7 +435,7 @@ void factor(symset fsys)
 					error(22); // Missing ')'.
 				}
 			}else
-		{
+			{
 			if ((i = position(id)) == 0)
 			{
 				error(11); // Undeclared identifier.
@@ -458,13 +463,13 @@ void factor(symset fsys)
 						int tmp=0;
 						int tmp_address=0;
 						int not_full_array = 0;
-						while(mk->len[tmp]){
-							if(len[tmp] >= mk->len[tmp])
+						while(mk->len[tmp] && tmp<num_dim_tmp){
+							if(len_left[tmp] >= mk->len[tmp])
 								error(29);
 							if(!tmp)
-								tmp_address = len[tmp];
+								tmp_address = len_left[tmp];
 							else
-								tmp_address = tmp_address*(mk->len[tmp-1]) + len[tmp];
+								tmp_address = tmp_address*(mk->len[tmp-1]) + len_left[tmp];
 							if(!len[tmp])
 								not_full_array = 1;
 							tmp++;
@@ -473,7 +478,7 @@ void factor(symset fsys)
 								if(not_full_array)
 									gen(LIT, 0, mk->address + tmp_address);
 								else
-							gen(LOD, level - mk->level, mk->address + tmp_address);
+								gen(LOD, level - mk->level, mk->address + tmp_address);
 							}else
 								gen(LIT, 0, mk->address + tmp_address);
 						break;
@@ -493,13 +498,13 @@ void factor(symset fsys)
 						if(sym == SYM_ARRAY){
 							int tmp=0;
 							int tmp_address=0;
-							while(mk->len[tmp]){
-								if(len[tmp] >= mk->len[tmp])
+							while(mk->len[tmp] && tmp<num_dim){
+								if(len_left[tmp] >= mk->len[tmp])
 									error(29);
 								if(!tmp)
-									tmp_address = len[tmp];
+									tmp_address = len_left[tmp];
 								else
-									tmp_address = tmp_address*(mk->len[tmp-1]) + len[tmp];
+									tmp_address = tmp_address*(mk->len[tmp-1]) + len_left[tmp];
 								tmp++;
 							}
 							if(!is_addressof){
@@ -713,6 +718,11 @@ void statement(symset fsys)
 			getsym();
 		}//for pointer
 
+		int len_left[MAXDIM];//temporary
+		for(int i=0;i<=MAXDIM-1;i++)
+			len_left[i]=len[i];
+		int num_dim_tmp=num_dim;
+
 		mask* mk;
 		if (! (i = position(id)))
 		{
@@ -732,6 +742,7 @@ void statement(symset fsys)
 		{
 			error(13); // ':=' expected.
 		}
+
 		expression(fsys);
 		mk = (mask*) &table[i];
 		if (i)
@@ -742,13 +753,13 @@ void statement(symset fsys)
 			if(mk->kind == ID_ARRAY){
 				int tmp=0;
 				int tmp_address=0;
-				while(mk->len[tmp]){
-					if(len[tmp] >= mk->len[tmp])
+				while(mk->len[tmp] && tmp<num_dim_tmp){
+					if(len_left[tmp] >= mk->len[tmp])
 						error(29);
 					if(!tmp)
-						tmp_address = len[tmp];
+						tmp_address = len_left[tmp];
 					else
-						tmp_address = tmp_address*(mk->len[tmp-1]) + len[tmp];
+						tmp_address = tmp_address*(mk->len[tmp-1]) + len_left[tmp];
 					tmp++;
 				}
 				gen(STO, level - mk->level, mk->address + tmp_address);
@@ -772,7 +783,7 @@ void statement(symset fsys)
 				}else{//array of pointer
 					int tmp=0;
 					int tmp_address=0;
-					while(mk->len[tmp] && tmp < MAXDIM - 1){
+					while(mk->len[tmp] && tmp < num_dim_tmp){
 						if(len[tmp] >= mk->len[tmp])
 							error(29);
 						if(!tmp)
@@ -1171,7 +1182,7 @@ void interpret()
 			printf("%d\n", stack[top]);
 			top--;
 			break;
-case LODI:
+		case LODI:
 			stack[top] = stack[stack[top] + base(stack, b, i.l)]; //pointer can only be linked to those var in the same layers
 			break;
 		case STOI:
