@@ -4,6 +4,7 @@
 #define TXMAX      500    // length of identifier table
 #define MAXNUMLEN  14     // maximum number of digits in numbers
 #define NSYM       11     // maximum number of symbols in array ssym and csym
+#define NSYM       11     // maximum number of symbols in array ssym and csym
 #define MAXIDLEN   40     // length of identifiers
 #define MAXDIM	   5	  // max number of dimensions of an array
 
@@ -141,15 +142,13 @@ char* word[NRW + 1] =
 {
 	"", /* place holder */
 	"begin", "call", "const", "do", "end","if",
-	"odd", "procedure", "then", "var", "while",
-	"print"
+	"odd", "procedure", "then", "var", "while"
 };
 
 int wsym[NRW + 1] =
 {
 	SYM_NULL, SYM_BEGIN, SYM_CALL, SYM_CONST, SYM_DO, SYM_END,
-	SYM_IF, SYM_ODD, SYM_PROCEDURE, SYM_THEN, SYM_VAR, SYM_WHILE,
-	SYM_PRINT
+	SYM_IF, SYM_ODD, SYM_PROCEDURE, SYM_THEN, SYM_VAR, SYM_WHILE
 };
 
 int ssym[NSYM + 1] =
