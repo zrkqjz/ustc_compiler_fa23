@@ -11,9 +11,9 @@
 #define MAXLEVEL   32     // maximum depth of nesting block
 #define CXMAX      500    // size of code array
 
-#define MAXSYM     30     // maximum number of symbols  
+#define MAXSYM     32     // maximum number of symbols  
 
-#define STACKSIZE  10000   // maximum storage
+#define STACKSIZE  1000   // maximum storage
 
 enum symtype
 {
@@ -49,12 +49,14 @@ enum symtype
 	SYM_PROCEDURE,
 	SYM_ARRAY,
 	SYM_ADDRESSOF,
-	SYM_PRINT
+	SYM_PRINT,
+	SYM_FIELD
 };
 
 enum idtype
 {
-	ID_CONSTANT, ID_VARIABLE, ID_PROCEDURE, ID_ARRAY, ID_POINTER
+	ID_CONSTANT, ID_VARIABLE, ID_PROCEDURE, ID_ARRAY, 
+	ID_POINTER
 };
 
 enum opcode

@@ -105,7 +105,7 @@ void getsym(void)
 		a[k] = 0;
 		strcpy(id, a);
 		word[0] = id;
-// TODO: add new reserved word: print
+		// TODO: add new reserved word: print
 		i = NRW;
 		while (strcmp(id, word[i--]));
 		if (++i)
@@ -136,6 +136,11 @@ void getsym(void)
 		if (ch == '=')
 		{
 			sym = SYM_BECOMES; // :=
+			getch();
+		}
+		else if(ch==':')
+		{
+			sym = SYM_FIELD; //::
 			getch();
 		}
 		else
@@ -301,6 +306,22 @@ int position(char* id)
 	return i;
 } // position
 
+int position_field(char* id, int level_field)
+{
+	int i;
+	strcpy(table[0].name, id);
+	table[0].value=level_field;
+	i = tx;
+	mask* mk;
+	mk = (mask*) &table[i];
+	while ((strcmp(table[i].name, id) == 0&&(mk->level==level_field)) == 0 )
+	{
+		i--;
+	    mk = (mask*) &table[i];
+	}
+	return i;
+} 
+
 //////////////////////////////////////////////////////////////////////
 void constdeclaration()
 {
@@ -409,16 +430,16 @@ void factor(symset fsys)
 					error(22); // Missing ')'.
 				}
 			}else
+		{
+			if ((i = position(id)) == 0)
 			{
-				if ((i = position(id)) == 0)
+				error(11); // Undeclared identifier.
+			}
+			else
+			{
+				switch (table[i].kind)
 				{
-					error(11); // Undeclared identifier.
-				}
-				else
-				{
-					switch (table[i].kind)
-					{
-						mask* mk;
+					mask* mk;
 					case ID_CONSTANT:
 						gen(LIT, 0, table[i].value);
 						break;
@@ -449,12 +470,12 @@ void factor(symset fsys)
 							tmp++;
 						}
 						if(!is_addressof){
-							if(not_full_array)
+								if(not_full_array)
+									gen(LIT, 0, mk->address + tmp_address);
+								else
+							gen(LOD, level - mk->level, mk->address + tmp_address);
+							}else
 								gen(LIT, 0, mk->address + tmp_address);
-							else
-								gen(LOD, level - mk->level, mk->address + tmp_address);
-						}else
-							gen(LIT, 0, mk->address + tmp_address);
 						break;
 					case ID_POINTER:
 						mk = (mask*) &table[i];
@@ -493,12 +514,49 @@ void factor(symset fsys)
 						}else
 							error(5);
 						break;
-					} // switch
+				} // switch
+			}
+			getsym();
+			}
+		}
+		else if(sym == SYM_FIELD)
+		{
+		    int flag = 0;
+			char t[MAXIDLEN + 1];
+			int level_field;
+			getsym();
+			if(sym == SYM_IDENTIFIER)
+			while(table[position(id)].kind == ID_PROCEDURE)
+			{
+			    flag = 1;
+				strcpy(t,id);
+				getsym();
+			    if(sym == SYM_FIELD)
+				{
+					getsym();
+				}	
+			}
+			if(table[position(id)].kind == ID_VARIABLE)
+			{
+				if(!flag)//::i
+				{
+					level_field = 0;
 				}
+				else
+				{
+					mask* mk;
+					i = position(t);
+					mk = (mask*) &table[i];
+					level_field = mk->level + 1;
+				}
+				i = position_field(id,level_field);
+				mask* mk2;
+				mk2 = (mask*) &table[i];
+				gen(LOD, level - mk2->level, mk2->address);
 				getsym();
 			}
 		}
-		else if (sym == SYM_NUMBER)
+		else if(sym == SYM_NUMBER)
 		{
 			if (num > MAXADDRESS)
 			{
@@ -538,7 +596,7 @@ void term(symset fsys)
 {
 	int mulop;
 	symset set;
-	is_addressof = 0;	
+	is_addressof = 0;
 	set = uniteset(fsys, createset(SYM_TIMES, SYM_SLASH, SYM_NULL));
 	if(sym == SYM_ADDRESSOF){
 		getsym();
@@ -647,7 +705,7 @@ void statement(symset fsys)
 	symset set1, set;
 
 	if (sym == SYM_IDENTIFIER || sym == SYM_ARRAY || sym == SYM_TIMES)
-	{ // variable assignment or array
+	{ // variable assignment or array 
 
 		int pointer_length = 0;
 		while(sym == SYM_TIMES){
@@ -836,7 +894,7 @@ void statement(symset fsys)
 		gen(JMP, 0, cx1);
 		code[cx2].a = cx;
 	}
-
+	
 		// TODO: add PRT to symtype
 	else if (sym == SYM_PRINT){
 		getsym();
@@ -1113,7 +1171,7 @@ void interpret()
 			printf("%d\n", stack[top]);
 			top--;
 			break;
-		case LODI:
+case LODI:
 			stack[top] = stack[stack[top] + base(stack, b, i.l)]; //pointer can only be linked to those var in the same layers
 			break;
 		case STOI:
@@ -1175,7 +1233,7 @@ void main ()
 	// create begin symbol sets
 	declbegsys = createset(SYM_CONST, SYM_VAR, SYM_PROCEDURE, SYM_NULL);
 	statbegsys = createset(SYM_BEGIN, SYM_CALL, SYM_IF, SYM_WHILE, SYM_NULL);
-	facbegsys = createset(SYM_IDENTIFIER, SYM_NUMBER,  SYM_TIMES, SYM_LPAREN, SYM_MINUS, SYM_ARRAY, SYM_ADDRESSOF, SYM_NULL);
+	facbegsys = createset(SYM_IDENTIFIER, SYM_NUMBER,  SYM_TIMES, SYM_LPAREN, SYM_MINUS, SYM_ARRAY, SYM_ADDRESSOF, SYM_FIELD, SYM_NULL);
 
 	err = cc = cx = ll = 0; // initialize global variables
 	ch = ' ';
@@ -1206,7 +1264,7 @@ void main ()
 		fclose(hbin);
 	}
 	if (err == 0)
-		interpret();
+    		interpret();
 	else
 		printf("There are %d error(s) in PL/0 program.\n", err);
 	listcode(0, cx);

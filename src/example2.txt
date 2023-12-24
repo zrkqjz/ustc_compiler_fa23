@@ -1,0 +1,24 @@
+var i;
+procedure p1;
+  var i;
+  procedure p2;
+    var i;
+    procedure p3;
+      var i;
+      begin
+        print(::i+3);
+        i:=::p1::i;
+        i:=::p1::p2::i;
+      end;
+    begin
+      i:=3;
+      call p3;
+    end;
+  begin 
+    i:=2;
+    call p2;
+  end;
+begin
+  i:=2;
+  call p1;
+end.
