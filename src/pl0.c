@@ -105,7 +105,7 @@ void getsym(void)
 		a[k] = 0;
 		strcpy(id, a);
 		word[0] = id;
-		// TODO: add new reserved word: print
+// TODO: add new reserved word: print
 		i = NRW;
 		while (strcmp(id, word[i--]));
 		if (++i)
@@ -194,7 +194,7 @@ void getsym(void)
 
 /**
  * @description:generates (assembles) an instruction.
- * @param {int} x  opcode
+* @param {int} x  opcode
  * @param {int} y  level
  * @param {int} z  address
  */
@@ -267,6 +267,12 @@ void enter(int kind)
 		}
 		dx += arr_length;
 		break;
+	case ID_POINTER:
+		mk = (mask*) &table[tx];
+		mk->level = level;
+		mk->len[0] = num_dim;// a pointer's len[0] represents its (*times)
+		mk->address = dx++;
+		break;
 	} // switch
 } // enter
 
@@ -322,6 +328,15 @@ void vardeclaration(void)
 	if (sym == SYM_ARRAY){
 		enter(ID_ARRAY);
 		getsym();
+	}else
+	if (sym == SYM_TIMES){
+		num_dim = 0;
+		while(sym == SYM_TIMES){
+			num_dim++;
+			getsym();
+		}
+		enter(ID_POINTER);
+		getsym();
 	}
 	else{
 		error(4); // There must be an identifier to follow 'const', 'var', or 'procedure'.
@@ -352,8 +367,14 @@ void factor(symset fsys)
 
 	if (inset(sym, facbegsys))
 	{
-		if (sym == SYM_IDENTIFIER || sym == SYM_ARRAY)
+		if (sym == SYM_IDENTIFIER || sym == SYM_ARRAY || sym == SYM_TIMES)  //ident, array or pointer
 		{
+			int pointer_length = 0;
+			while(sym == SYM_TIMES){
+				pointer_length++;
+				getsym();
+			}
+
 			if ((i = position(id)) == 0)
 			{
 				error(11); // Undeclared identifier.
@@ -368,7 +389,10 @@ void factor(symset fsys)
 					break;
 				case ID_VARIABLE:
 					mk = (mask*) &table[i];
-					gen(LOD, level - mk->level, mk->address);
+					if(!is_addressof)
+						gen(LOD, level - mk->level, mk->address);
+					else
+						gen(LIT, 0, mk->address);//address of
 					break;
 				case ID_PROCEDURE:
 					error(21); // Procedure identifier can not be in an expression.
@@ -386,7 +410,18 @@ void factor(symset fsys)
 							tmp_address = tmp_address*(mk->len[tmp-1]) + len[tmp];
 						tmp++;
 					}
-					gen(LOD, level - mk->level, mk->address + tmp_address);
+					if(!is_addressof)
+						gen(LOD, level - mk->level, mk->address + tmp_address);
+					else
+						gen(LIT, 0, mk->address + tmp_address);
+					break;
+				case ID_POINTER:
+					mk = (mask*) &table[i];
+					gen(LOD, level - mk->level, mk->address);
+					while(pointer_length){
+						gen(LODI, 0, 0);
+						pointer_length--;
+					}
 					break;
 				} // switch
 			}
@@ -432,8 +467,12 @@ void term(symset fsys)
 {
 	int mulop;
 	symset set;
-	
+	is_addressof = 0;	
 	set = uniteset(fsys, createset(SYM_TIMES, SYM_SLASH, SYM_NULL));
+	if(sym == SYM_ADDRESSOF){
+		getsym();
+		is_addressof = 1;
+	}
 	factor(set);
 	while (sym == SYM_TIMES || sym == SYM_SLASH)
 	{
@@ -536,14 +575,21 @@ void statement(symset fsys)
 	int i, cx1, cx2;
 	symset set1, set;
 
-	if (sym == SYM_IDENTIFIER || sym == SYM_ARRAY)
-	{ // variable assignment or array 
+	if (sym == SYM_IDENTIFIER || sym == SYM_ARRAY || sym == SYM_TIMES)
+	{ // variable assignment or array
+
+		int pointer_length = 0;
+		while(sym == SYM_TIMES){
+			pointer_length++;
+			getsym();
+		}//for pointer
+
 		mask* mk;
 		if (! (i = position(id)))
 		{
 			error(11); // Undeclared identifier.
 		}
-		else if (table[i].kind != ID_VARIABLE && table[i].kind != ID_ARRAY)
+		else if (table[i].kind != ID_VARIABLE && table[i].kind != ID_ARRAY && table[i].kind != ID_POINTER)
 		{
 			error(12); // Illegal assignment.
 			i = 0;
@@ -577,6 +623,22 @@ void statement(symset fsys)
 					tmp++;
 				}
 				gen(STO, level - mk->level, mk->address + tmp_address);
+			}
+			else
+			if(mk->kind == ID_POINTER){
+				if(mk->len[0] < pointer_length){
+					error(30);
+				}
+				if(pointer_length > 0){
+					gen(LOD, level - mk->level, mk->address);
+					pointer_length--;
+					while(pointer_length){
+						gen(LODI, 0, 0);
+						pointer_length--;
+					}
+					gen(STOI, 0, 0);
+				}else
+					gen(STO, level - mk->level, mk->address);
 			}
 		}
 	}
@@ -679,7 +741,7 @@ void statement(symset fsys)
 		gen(JMP, 0, cx1);
 		code[cx2].a = cx;
 	}
-	
+
 		// TODO: add PRT to symtype
 	else if (sym == SYM_PRINT){
 		getsym();
@@ -734,7 +796,7 @@ void block(symset fsys)
 	}
 	do
 	{
-		if (sym == SYM_CONST)
+		while (sym == SYM_CONST)
 		{ // constant declarations
 			getsym();
 			do
@@ -755,9 +817,9 @@ void block(symset fsys)
 				}
 			}
 			while (sym == SYM_IDENTIFIER);
-		} // if
+		} // while CONST
 
-		if (sym == SYM_VAR)
+		while (sym == SYM_VAR)
 		{ // variable declarations
 			getsym();
 			do
@@ -778,7 +840,7 @@ void block(symset fsys)
 				}
 			}
 			while (sym == SYM_IDENTIFIER || sym == SYM_ARRAY);
-		} // if
+		} // while VAR
 
 
 		block_dx = dx; //save dx before handling procedure call!
@@ -956,6 +1018,14 @@ void interpret()
 			printf("%d\n", stack[top]);
 			top--;
 			break;
+		case LODI:
+			stack[top] = stack[stack[top]];
+			break;
+		case STOI:
+			stack[stack[top]] = stack[top-1];
+			printf("%d\n", stack[top-1]);
+			top-=2;
+			break;
 		case CAL:
 			stack[top + 1] = base(stack, b, i.l);
 			// generate new block mark
@@ -1010,7 +1080,7 @@ void main ()
 	// create begin symbol sets
 	declbegsys = createset(SYM_CONST, SYM_VAR, SYM_PROCEDURE, SYM_NULL);
 	statbegsys = createset(SYM_BEGIN, SYM_CALL, SYM_IF, SYM_WHILE, SYM_NULL);
-	facbegsys = createset(SYM_IDENTIFIER, SYM_NUMBER, SYM_LPAREN, SYM_MINUS, SYM_ARRAY, SYM_NULL);
+	facbegsys = createset(SYM_IDENTIFIER, SYM_NUMBER,  SYM_TIMES, SYM_LPAREN, SYM_MINUS, SYM_ARRAY, SYM_ADDRESSOF, SYM_NULL);
 
 	err = cc = cx = ll = 0; // initialize global variables
 	ch = ' ';

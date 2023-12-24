@@ -3,7 +3,7 @@
 #define NRW        12     // number of reserved words
 #define TXMAX      500    // length of identifier table
 #define MAXNUMLEN  14     // maximum number of digits in numbers
-#define NSYM       10     // maximum number of symbols in array ssym and csym
+#define NSYM       11     // maximum number of symbols in array ssym and csym
 #define MAXIDLEN   40     // length of identifiers
 #define MAXDIM	   5	  // max number of dimensions of an array
 
@@ -48,17 +48,18 @@ enum symtype
 	SYM_VAR,
 	SYM_PROCEDURE,
 	SYM_ARRAY,
+	SYM_ADDRESSOF,
 	SYM_PRINT
 };
 
 enum idtype
 {
-	ID_CONSTANT, ID_VARIABLE, ID_PROCEDURE, ID_ARRAY
+	ID_CONSTANT, ID_VARIABLE, ID_PROCEDURE, ID_ARRAY, ID_POINTER
 };
 
 enum opcode
 {
-	LIT, OPR, LOD, STO, CAL, INT, JMP, JPC, 
+	LIT, OPR, LOD, STO, CAL, INT, JMP, JPC, LODI, STOI, 
 	PRT
 };
 
@@ -110,8 +111,8 @@ char* err_msg[] =
 /* 26 */    "Expect number in array declaration here.",
 /* 27 */    "Expect ']' here",
 /* 28 */    "Too many dimensions for the array.",
-/* 29 */    "Index out of range",
-/* 30 */    "",
+/* 29 */    "Index out of range.",
+/* 30 */    "Too many '*' in pointer.",
 /* 31 */    "",
 /* 32 */    "There are too many levels."
 };
@@ -130,6 +131,7 @@ int  level = 0;
 int  tx = 0;
 int  len[MAXDIM] = {0};	// for array only
 int  num_dim = 0;// for array only
+int  is_addressof = 0;//for operator '&'
 
 char line[80];
 
@@ -153,18 +155,18 @@ int wsym[NRW + 1] =
 int ssym[NSYM + 1] =
 {
 	SYM_NULL, SYM_PLUS, SYM_MINUS, SYM_TIMES, SYM_SLASH,
-	SYM_LPAREN, SYM_RPAREN, SYM_EQU, SYM_COMMA, SYM_PERIOD, SYM_SEMICOLON
+	SYM_LPAREN, SYM_RPAREN, SYM_EQU, SYM_COMMA, SYM_PERIOD, SYM_SEMICOLON, SYM_ADDRESSOF
 };
 
 char csym[NSYM + 1] =
 {
-	' ', '+', '-', '*', '/', '(', ')', '=', ',', '.', ';'
+	' ', '+', '-', '*', '/', '(', ')', '=', ',', '.', ';', '&'
 };
 
-#define MAXINS   9
+#define MAXINS   11
 char* mnemonic[MAXINS] =
 {
-	"LIT", "OPR", "LOD", "STO", "CAL", "INT", "JMP", "JPC", 
+	"LIT", "OPR", "LOD", "STO", "CAL", "INT", "JMP", "JPC", "LODI", "STOI",
 	"PRT"
 };
 
