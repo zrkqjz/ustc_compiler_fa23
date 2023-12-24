@@ -417,10 +417,14 @@ void factor(symset fsys)
 					break;
 				case ID_POINTER:
 					mk = (mask*) &table[i];
-					gen(LOD, level - mk->level, mk->address);
-					while(pointer_length){
-						gen(LODI, 0, 0);
-						pointer_length--;
+					if(!is_addressof){
+						gen(LOD, level - mk->level, mk->address);
+						while(pointer_length){
+							gen(LODI, 0, 0);
+							pointer_length--;
+						}
+					}else{
+						gen(LIT, 0, mk->address);
 					}
 					break;
 				} // switch
@@ -1019,10 +1023,10 @@ void interpret()
 			top--;
 			break;
 		case LODI:
-			stack[top] = stack[stack[top]];
+			stack[top] = stack[stack[top] + base(stack, b, i.l)]; //pointer can only be linked to those var in the same layers
 			break;
 		case STOI:
-			stack[stack[top]] = stack[top-1];
+			stack[stack[top] + base(stack, b, i.l)] = stack[top-1];
 			printf("%d\n", stack[top-1]);
 			top-=2;
 			break;
@@ -1047,7 +1051,7 @@ void interpret()
 			break;
 		case PRT:
 			if (i.a == 0)
-				printf("%d ", stack[top--]);
+				printf("prt:%d ", stack[top--]);
 			else
 				printf("\n");
 			break;
