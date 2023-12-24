@@ -1,6 +1,6 @@
 #include <stdio.h>
 
-#define NRW        12     // number of reserved words
+#define NRW        12     // number of reserved words //
 #define TXMAX      500    // length of identifier table
 #define MAXNUMLEN  14     // maximum number of digits in numbers
 #define NSYM       11     // maximum number of symbols in array ssym and csym
